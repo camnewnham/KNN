@@ -15,15 +15,17 @@ namespace KNN.Jobs {
 		[WriteOnly] NativeSlice<int> m_result;
 
 		float3 m_queryPosition;
+		float m_maxRange;
 
-		public QueryKNearestJob(KnnContainer container, float3 queryPosition, NativeSlice<int> result) {
+		public QueryKNearestJob(KnnContainer container, float3 queryPosition, NativeSlice<int> result, float maxRange = float.PositiveInfinity) {
 			m_result = result;
 			m_queryPosition = queryPosition;
 			m_container = container;
+			m_maxRange = maxRange;
 		}
 
 		void IJob.Execute() {
-			m_container.QueryKNearest(m_queryPosition, m_result);
+			m_container.QueryKNearest(m_queryPosition, m_result, m_maxRange);
 		}
 	}
 
@@ -59,11 +61,13 @@ namespace KNN.Jobs {
 		NativeSlice<int> m_results;
 
 		int m_k;
+		float m_maxRange;
 
-		public QueryKNearestBatchJob(KnnContainer container, NativeArray<float3> queryPositions, NativeSlice<int> results) {
+		public QueryKNearestBatchJob(KnnContainer container, NativeArray<float3> queryPositions, NativeSlice<int> results, float maxRange = float.PositiveInfinity) {
 			m_container = container;
 			m_queryPositions = queryPositions;
 			m_results = results;
+			m_maxRange = maxRange;
 
 		#if ENABLE_UNITY_COLLECTIONS_CHECKS
 			if (queryPositions.Length == 0 || results.Length % queryPositions.Length != 0) {
@@ -78,7 +82,7 @@ namespace KNN.Jobs {
 			// Write results to proper slice!
 			for (int index = startIndex; index < startIndex + count; ++index) {
 				NativeSlice<int> resultsSlice = m_results.Slice(index * m_k, m_k);
-				m_container.QueryKNearest(m_queryPositions[index], resultsSlice);
+				m_container.QueryKNearest(m_queryPositions[index], resultsSlice, m_maxRange);
 			}
 		}
 	}

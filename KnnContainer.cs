@@ -539,11 +539,16 @@ namespace KNN {
 			temp.Dispose();
 		}
 
-		public void QueryKNearest(float3 queryPosition, NativeSlice<int> result) {
+		public void QueryKNearest(float3 queryPosition, NativeSlice<int> result, float maxRange = float.PositiveInfinity) {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
 			AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
 #endif
-			
+			if (maxRange != float.PositiveInfinity)
+			{
+				// Use maxRangeSq
+				maxRange *= maxRange;
+			}
+
 			var temp = KnnQueryTemp.Create(result.Length);
 			int k = result.Length;
 			
@@ -576,7 +581,9 @@ namespace KNN {
 						// project the tempClosestPoint to other bound
 						tempClosestPoint[partitionAxis] = partitionCoord;
 
-						if (node.Count != 0) {
+						float sqDist = math.lengthsq(tempClosestPoint - queryPosition);
+
+						if (node.Count != 0 && sqDist <= maxRange) {
 							temp.PushQueryNode(node.PositiveChildIndex, tempClosestPoint, queryPosition);
 						}
 					} else {
@@ -588,7 +595,10 @@ namespace KNN {
 						// project the tempClosestPoint to other bound
 						tempClosestPoint[partitionAxis] = partitionCoord;
 
-						if (node.Count != 0) {
+						float sqDist = math.lengthsq(tempClosestPoint - queryPosition);
+
+						if (node.Count != 0 && sqDist <= maxRange)
+						{
 							temp.PushQueryNode(node.NegativeChildIndex, tempClosestPoint, queryPosition);
 						}
 					}
@@ -609,7 +619,7 @@ namespace KNN {
 			}
 			
 			for (int i = 0; i < k; i++) {
-				result[i] = temp.MaxHeap.PopObjMax();
+				result[i] = temp.MaxHeap.Count > 0 ? temp.MaxHeap.PopObjMax() : -1;
 			}
 			
 			temp.Dispose();
